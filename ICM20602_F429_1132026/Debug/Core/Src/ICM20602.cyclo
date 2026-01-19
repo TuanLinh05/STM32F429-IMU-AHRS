@@ -1,0 +1,8 @@
+../Core/Src/ICM20602.c:13:13:ICM_Select	1
+../Core/Src/ICM20602.c:17:13:ICM_Unselect	1
+../Core/Src/ICM20602.c:22:13:ICM_WriteReg	1
+../Core/Src/ICM20602.c:30:16:ICM_ReadReg	1
+../Core/Src/ICM20602.c:41:9:ICM20602_Init	2
+../Core/Src/ICM20602.c:79:6:ICM20602_Read	1
+../Core/Src/ICM20602.c:126:6:Kalman_Init	1
+../Core/Src/ICM20602.c:149:7:Kalman_GetAngle	1
