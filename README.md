@@ -1,55 +1,70 @@
-STM32F429 Flight Controller Core (IMU & AHRS System)
+# 🧭 STM32F429 Flight Controller Core – IMU & AHRS
 
-1. Project Overview
+![MCU](https://img.shields.io/badge/MCU-STM32F429%20(Cortex--M4F)-03234B?logo=stmicroelectronics&logoColor=white)
+![IMU](https://img.shields.io/badge/IMU-ICM--20602-6A1B9A)
+![Sensors](https://img.shields.io/badge/Sensors-QMC5883L%20%7C%20HMC5883L%20%7C%20BMP280-6A1B9A)
+![Language](https://img.shields.io/badge/Language-C-555555?logo=c)
 
-This project provides the Core Firmware for developing a custom Flight Controller based on the STM32F429VIT6 microcontroller. The system focuses on high-precision sensor data acquisition, signal processing, and Attitude Estimation (AHRS) specifically tuned for an F450 Drone frame.
-The codebase is built with a modular architecture, integrating advanced filtering and Sensor Fusion algorithms to provide stable Pitch, Roll, Yaw, and Altitude data.
+Core firmware for a **custom drone flight controller** on the **STM32F429**. It covers sensor acquisition, signal processing and **attitude & heading estimation (AHRS)**, tuned for an **F450 quadcopter frame**.
+A modular sensor-fusion pipeline outputs stable **Roll, Pitch, Yaw and Altitude**.
 
-2. Hardware Architecture
+---
 
-Microcontroller (MCU): STM32F429VIT6 (ARM Cortex-M4, FPU).
+## 🔧 Hardware
 
-Inertial Measurement Unit (IMU): ICM-20602 (6-DOF Gyroscope & Accelerometer) via SPI.
+| Component | Interface | STM32F429 pins |
+| :-- | :-- | :-- |
+| **ICM-20602**: 6-DOF gyro + accel | SPI1 | PA5 SCK · PA6 MISO · PA7 MOSI · PA4 CS |
+| **QMC5883L / HMC5883L**: magnetometer | I2C1 | PB6 SCL · PB7 SDA |
+| **BMP280**: barometer | I2C1 | PB6 SCL · PB7 SDA |
+| Heartbeat LED | GPIO | PG13 |
 
-Magnetometer (Compass): Supports both QMC5883L and HMC5883L via I2C.
+> Target MCU: STM32F429VIT6 flight controller. The CubeIDE project is configured for **STM32F429ZIT6** (STM32F429I-Discovery).
 
-Barometer: BMP280 via I2C.
+## ✨ Key features
 
+### Smart sensor system
+- **Soft-fail initialisation:** the system still boots if a sensor is missing or fails. `Status_ICM`, `Status_Mag` and `Status_Baro` are monitored continuously, so the firmware never hangs on a sensor.
+- **Magnetometer auto-detection:** scans the I²C bus and selects the right driver for **QMC5883L (0x0D)** or **HMC5883L (0x1E)** without recompiling.
 
-3. Key Features
+### Algorithms & DSP
+- **Kalman filter:** a 2-state filter (angle, bias) fuses the accelerometer and gyroscope, rejecting vibration noise and gyro drift.
+- **Tilt-compensated compass:** accurate heading even when the drone is tilted, using the Kalman roll and pitch.
+- **Hardware DLPF:** the ICM-20602 internal low-pass filters are set to about 41 Hz (gyro) and 44 Hz (accel) to match typical frame vibration.
+- **Altitude estimation:** relative altitude from BMP280 pressure, using the barometric formula.
 
-A. Smart Sensor System
+### Calibration
+- **Gyroscope:** 200 samples at start-up to remove static bias.
+- **Magnetometer (hard & soft iron):** rotate the drone for about 15 s in calibration mode. Min/max values on each axis give the offset and scale corrections.
 
-"Soft-Fail" Initialization: The system is designed to boot successfully even if individual sensors fail or are disconnected. The status of each sensor (Status_ICM, Status_Mag, Status_Baro) is monitored continuously to prevent system hangs.
+### Real-time performance
+- Main loop runs at about **200–250 Hz**.
+- Heartbeat LED on **PG13**. Global variables are laid out for easy debugging with **STM32CubeIDE Live Expressions**.
 
-Auto-Detect Magnetometer: The firmware automatically scans the I2C bus to detect and configure the appropriate driver for either QMC5883L (0x0D) or HMC5883L (0x1E) without requiring recompilation.
+## 📂 Project structure
 
-B. Algorithms & DSP (Digital Signal Processing)
-Kalman Filter: Implements a 2-state Kalman Filter (Angle, Bias) to fuse Accelerometer and Gyroscope data, effectively eliminating mechanical vibration noise and Gyro drift.
+```text
+ICM20602_F429_1132026/
+├── Core/Inc/ICM20602.h, hmc5883l.h, IMU_System.h
+├── Core/Src/ICM20602.c      # ICM-20602 SPI driver + DLPF configuration
+├── Core/Src/hmc5883l.c      # Magnetometer driver (QMC5883L / HMC5883L)
+├── Core/Src/IMU_System.c    # Sensor fusion: Kalman, tilt compensation, altitude, calibration
+└── Core/Src/main.c          # Initialisation + main loop
+```
 
-Tilt-Compensated Compass: Calculates accurate Heading (Yaw) even when the drone is tilted, using rotation matrices derived from the Kalman Filter's Roll/Pitch estimates.
+## 🚀 Getting started
 
-Hardware DLPF Configuration: Optimizes the Internal Digital Low Pass Filter of the ICM-20602 (Gyro ~41Hz, Accel ~44Hz) to match the vibration characteristics of standard drone frames.
+1. Open `ICM20602_F429_1132026` in **STM32CubeIDE**, build and flash it with an ST-Link.
+2. Keep the board still during start-up for the gyro calibration.
+3. Open **Live Expressions** to watch roll, pitch, yaw, altitude and the sensor status flags.
 
-Altitude Estimation: Calculates relative altitude based on atmospheric pressure data from the BMP280 using the standard barometric formula.
+## 🛫 Applications
 
-C. Calibration Routines
-Gyroscope Calibration: Automatically samples 200 readings upon startup to calculate and remove static bias.
+This firmware is the base for further flight-control features:
+- **Self-levelling** (angle mode)
+- **Altitude hold**
+- **Inertial navigation** for custom UAVs
 
-Magnetometer Calibration (Hard/Soft Iron): Features a dedicated calibration mode. By rotating the drone for ~15 seconds, the system records Min/Max values on all 3 axes to calculate Hard Iron Offset and Soft Iron Scale corrections.
+---
 
-D. Real-time Performance
-Loop Rate: The main loop operates stably at approximately 200-250Hz.
-
-Monitoring: Integrated "Heartbeat" LED on PG13 and global variables optimized for real-time debugging via STM32CubeIDE Live Watch.
-
-
-4. Applications
-
-This project serves as a foundational base for advanced flight control features such as:
-
-Self-Leveling (Angle Mode).
-
-Altitude Hold.
-
-Inertial Navigation Systems (INS) for custom UAVs.
+<p align="center">Made by <a href="https://github.com/TuanLinh05">Vu Tuan Linh</a> · HCMUT</p>
